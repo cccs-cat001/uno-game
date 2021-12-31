@@ -5,19 +5,10 @@
 # @Last Modified time: 2016-04-03 01:51:49
 
 import random
-import time
-import threading
+from card import Card, index_s, index_r, index_d2, index_d4
 
-color_full = ['','Red','Yellow','Blue','Green']
-color_repr = ['S','R','Y','B','G']
-num_full = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Draw Two','Reverse','Skip','Draw Four','Wild','Blank']
-num_repr = ['0','1','2','3','4','5','6','7','8','9','D2','R','S','D4','W','B']
-index_d2 = 10
-index_r = 11
-index_s = 12
-index_d4 = 13
-index_w = 14
-index_b = 15
+from player import Player
+
 default_rules = {
     'cards_dealt' : 7, #done
     'special_last_punish' : True, # done
@@ -27,38 +18,6 @@ default_rules = {
     'blank_cards': 0,
     'blank_cards_text': []
 }
-
-class Card:
-    def __init__(self,color,num):
-        self.color = color
-        self.num = num
-        self.draw = 0
-        if num == index_d2:
-            self.draw = 2
-        if num == index_d4:
-            self.draw = 4
-
-    def __repr__(self):
-        return color_repr[self.color] + num_repr[self.num]
-
-    def __str__(self):
-        return (color_full[self.color] + ' ' + num_full[self.num]).strip()
-
-    @property
-    def is_special(self):
-        return self.num > 9
-
-
-class BlankCard(Card):
-    def __init__(self,text):
-        super().__init__(0,index_b)
-        self.text = text
-
-    def __repr__(self):
-        return 'SB'
-
-    def __str__(self):
-        return 'Blank:\{{}\}'.format(self.text)
 
 class Deck:
     def __init__(self,shuffle=True):
@@ -92,112 +51,6 @@ class Deck:
             self._shuffle()
         return self.deck.pop()
 
-class Player:
-    def __init__(self,game,name,robot=False,robot_delay=0):
-        self.game = game
-        self.name = name.capitalize()
-        self.id = None
-        self.hand = []
-        self.drawable = False
-        self.myturn = False
-        self.on_my_turn = lambda: None
-        self.on_change = lambda: None
-        self.on_uno = lambda: None
-        self.buffer = []
-        self.robot = robot
-        self.robot_delay = robot_delay
-        self.score = 0
-
-    @property
-    def handscore(self):
-        score = 0
-        for c in self.hand:
-            if not c.is_special:
-                score += c.num
-            elif c.color == 0:
-                score += 40
-            else:
-                score += 20
-        return score
-
-
-    def robot_delay_thread(self):
-        if self.robot_delay:
-            th = threading.Thread(target=self.robot_auto)
-            th.start()
-        else:
-            self.robot_auto()
-
-    def robot_auto(self):
-        time.sleep(self.robot_delay)
-        self.autoplay()
-
-    def on_turn(self):
-        if self.robot:
-            self.robot_delay_thread()
-        else:
-            self.on_my_turn()
-
-    def drawone(self):
-        if not self.myturn: return False
-        if self.drawable:
-            self.game.draw_to_player(self.id,1)
-            self.drawable = False
-            if not self.robot:
-                self.on_my_turn()
-            return True
-        else:
-            return False
-
-    def play(self, index, user_color=None):
-        index = int(index)
-        if not self.game.playing: return False
-        if not self.myturn: return False
-        if index > len(self.hand) - 1: return False
-        return self.game.play(self,self.hand[index],user_color)
-
-    def autoplay(self):
-        if not self.game.playing: return False
-        if not self.myturn: return False
-        playables = []
-        # Pick out all playable cards
-        for i in range(len(self.hand)):
-            if self.game.playable(self.hand[i]):
-                playables.append(i)
-        if len(playables):
-            return self.play(random.choice(playables))
-        else:
-            # No card is playable
-            if self.drawone():
-                return self.autoplay()
-            elif self.pass_turn():
-                return True
-            else:
-                return self.accept_punish()
-
-    def accept_punish(self):
-        if not self.myturn: return False
-        return self.game.punish(self.id)
-
-    def pass_turn(self):
-        if not self.myturn: return False
-        if self.drawable: return False
-        if self.game.has_punishment: return False
-        self.game.turn()
-        return True
-
-    def confirm(self):
-        if not self.myturn: return False
-        if self.drawable: return False
-        if self.game.has_punishment: return False
-        self.game.turn()
-        return True
-
-    def __repr__(self):
-        return '{}:{}'.format(self.name,len(self.hand))
-
-    def __str__(self):
-        return self.name
 
 class Game:
     def __init__(self, rules = None):
