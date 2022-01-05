@@ -1,0 +1,21 @@
+---
+# Source: uno/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "uno-test-connection"
+  labels:
+    helm.sh/chart: uno-0.1.0
+    app.kubernetes.io/name: uno
+    app.kubernetes.io/instance: uno
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['uno:80']
+  restartPolicy: Never
