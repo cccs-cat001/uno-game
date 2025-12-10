@@ -6,7 +6,7 @@ Default configurations.
 '''
 
 configs = {
-    'port' : 80,
+    'port' : 8080,
     'chat_root' : '',
     'room_max_limit' : 10,
     'default_rooms' : ['default']
